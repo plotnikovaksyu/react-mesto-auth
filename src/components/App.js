@@ -37,27 +37,20 @@ function App() {
 
     const navigate = useNavigate();
 
-    //отрисовать все карточки
+    //отрисовать все карточки после авторизации & обновить стейт с инфой юзера
     useEffect(() => {
-        api.getInitialCards()
-            .then((cards) => {
-                setCards(cards)
-            })
-            .catch((err) => {
-                console.log((`${err}`))
-            })
-    }, [])
+        if (loggedIn) {
+            Promise.all([api.getUserData(), api.getInitialCards()])
+                .then(([userData, cardsData]) => {
+                    setCurrentUser(userData)
+                    setCards(cardsData)
+                })
+                .catch((err) => {
+                    console.log((`${err}`))
+                })
+        }
+    }, [loggedIn])
 
-    //обновить стейт с инфой юзера
-    useEffect(() => {
-        Promise.all([api.getUserData()])
-            .then(([data]) => {
-                setCurrentUser(data)
-            })
-            .catch((err) => {
-                console.log((`${err}`))
-            })
-    }, [])
 
     // поставить и удалить лайк
     function handleCardLike(card) {
@@ -177,34 +170,36 @@ function App() {
         auth.register(email, password)
             .then(() => {
                 setIsInfoTooltipOpen(true)
-                setIsRegistrationMessage(true); //выдать попап о регистрации
+                setIsRegistrationMessage({ status: true, message: 'Вы успешно зарегистрировались!' }); //выдать попап о регистрации
                 navigate('/sign-in', { replace: true });
             })
             .catch((err) => {
                 console.log((`${err}`))
                 setIsInfoTooltipOpen(true)
-                setIsRegistrationMessage(false) //выдать попап об ошибке
+                setIsRegistrationMessage({ status: false, message: 'Что-то пошло не так! Попробуйте ещё раз.' }) //выдать попап об ошибке
             })
     }
 
     //залогиниться
     function handleLoginSubmit(email, password) {
         auth.authorize(email, password)
-
             .then((data) => {
                 if (data.token) {
                     setLoggedIn(true)
                     localStorage.setItem('token', data.token) //сохранить токен
                     setEmail(email)
+                    setIsInfoTooltipOpen(true)
+                    setIsRegistrationMessage({ status: true, message: 'С возвращением!' }); //выдать попап о регистрации
                     navigate('/', { replace: true })
                     // console.log(data.token)
                 }
             })
             .catch((err) => {
                 console.log((`${err}`))
+                setIsInfoTooltipOpen(true)
+                setIsRegistrationMessage({ status: false, message: 'Что-то пошло не так! Попробуйте ещё раз.' }) //выдать попап об ошибке
             })
     }
-
 
     //проверка jwt 
     useEffect(() => {
@@ -304,7 +299,8 @@ function App() {
                 <InfoTooltip
                     isOpen={isInfoTooltipOpen}
                     onClose={closeAllPopups}
-                    isRegistred={isRegistrationMessage}
+                    successfullStatus={isRegistrationMessage.status}
+                    message={isRegistrationMessage.message}
                 />
 
                 <Footer />
